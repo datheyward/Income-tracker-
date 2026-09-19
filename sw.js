@@ -1,24 +1,15 @@
-const CACHE_NAME = "income-tracker-v1";
-const FILES_TO_CACHE = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES_TO_CACHE))
-  );
+// This service worker intentionally disables itself and clears any old cached files,
+// so future app updates always show up immediately instead of being stuck on an old version.
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    caches.keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .then(() => self.registration.unregister())
+      .then(() => self.clients.matchAll({ type: "window" }))
+      .then((clients) => clients.forEach((client) => client.navigate(client.url)))
   );
 });
